@@ -1,84 +1,93 @@
 package communication;
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import dataTypes.NurbsCurve;
+
 
 
 public class ServerThread extends Thread {
-	//Data Variables
-	public ArrayList<NurbsCurve> data;
 	
 	//Server Variables
 	//ServerSocket DataServer;
 	protected DatagramSocket socket;
 	protected BufferedReader in = null;
 	//public DataInputStream is = null;
+	private boolean terminateRequested = false;
 	
 	
 	public ServerThread() throws IOException {
 		this("ServerThread",6666);
     }
+	
     public ServerThread(String name, int portNumber) throws IOException {
         super(name);
         socket = new DatagramSocket(portNumber);
-		  try {
-		       // DataServer = new ServerSocket(portNumber);
-			   // clientSocket = DataServer.accept();
-			  	serverSocket = new Socket("hostname", 25);
-			  	os = new DataOutputStream(serverSocket.getOutputStream());
-			  	is = new DataInputStream(serverSocket.getInputStream());
-		  		} catch (UnknownHostException e) {
-		        	System.err.println("Don't know about host: hostname");
-		        }catch (IOException e) {
-		        	System.err.println("Couldn't get I/O for the connection to: hostname");
-		     	}
+        //Should run a check on the integrity of the data to be sent here
 	}
-	
-	public static void main(String [ ] args)
-	{
-		System.out.println("HELLO WORLD!");
-		
-		Server newServer = new Server(8000);
-		
-		// If everything has been initialized then we want to write some data
-		// to the socket we have opened a connection to on port 25
-		    if (newServer != null && newServer.os != null && newServer.is != null) {
-		            try {
-		// The capital string before each colon has a special meaning to SMTP
-		// you may want to read the SMTP specification, RFC1822/3
-		        newServer.os.writeBytes("HELO\n");    
-		        newServer.os.writeBytes("MAIL From: k3is@fundy.csd.unbsj.ca\n");
-		        newServer.os.writeBytes("RCPT To: k3is@fundy.csd.unbsj.ca\n");
-		        newServer.os.writeBytes("DATA\n");
-		        newServer.os.writeBytes("From: k3is@fundy.csd.unbsj.ca\n");
-		        newServer.os.writeBytes("Subject: testing\n");
-		        newServer.os.writeBytes("Hi there\n"); // message body
-		        newServer.os.writeBytes("\n.\n");
-		        newServer.os.writeBytes("QUIT");
-		// keep on reading from/to the socket till we receive the "Ok" from SMTP,
-		// once we received that then we want to break.
-		                String responseLine;
-		                while ((responseLine = is.readLine()) != null) {
-		                    System.out.println("Server: " + responseLine);
-		                    if (responseLine.indexOf("Ok") != -1) {
-		                      break;
-		                    }
-		                }
-	    // clean up:
-	    // close the output stream
-	    // close the input stream
-	    // close the socket
-	             os.close();
-	                     is.close();
-	                     smtpSocket.close();   
-	                 } catch (UnknownHostException e) {
-	                     System.err.println("Trying to connect to unknown host: " + e);
-	                 } catch (IOException e) {
-	                     System.err.println("IOException:  " + e);
-	                 }
-	             }
-	         }   
-	}
+    
+    public void run() {
 
+        while (!terminateRequested) {
+            try {
+                byte[] buf = new byte[256];
+
+                int _PORT = 6666;
+                // receive request
+                DatagramPacket packet = new DatagramPacket(buf, buf.length);
+                socket.receive(packet);
+                
+                //Print received data
+                //TODO: implement logic for switching returned message based on received data
+                String decoded = new String(packet.getData(), "UTF-8");
+                System.out.println(decoded);
+                
+                byte[] data = headerConstructor(1000,11,2);
+ 
+		// send the response to the client at "address" and "port"
+                InetAddress address = packet.getAddress();
+                int port = packet.getPort();
+                packet = new DatagramPacket(data, data.length, address, _PORT);
+                socket.send(packet);
+                
+                int[][] instructionArray = 
+                        {
+                            {0,     100,     100       },
+                            {1,     0,      -1000   },
+                            {1,     1000,   0       },
+                            {0,     1200,   0       },
+                            {1,     0,      -1000   },
+                            {1,     1000,   0       },
+                            {1,     0,      1000    },
+                            {1,     -1000,  0       },
+                            {0,     2400,   0       },
+                            {1,     0,      -1000   },
+                            {1,     1000,   0       }
+                        };
+                
+                int i = 0;
+                while(i<11){
+        
+                    socket.receive(packet);
+                    
+                    data = instructionConstructor(instructionArray[i][0],instructionArray[i][1],instructionArray[i][2]);
+                    address = packet.getAddress();
+                    port = packet.getPort();
+                    packet = new DatagramPacket(data, data.length, address, _PORT);
+                    socket.send(packet);
+                    i++;
+                }
+                
+                
+                
+                
+            } catch (IOException e) {
+                e.printStackTrace();
+                terminateRequested = true;
+            }
+        }
+        socket.close();
+    }
+    
+    
+
+    
 }

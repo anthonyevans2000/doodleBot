@@ -4,6 +4,6 @@ import java.io.*;
 
 public class Server {
     public static void main(String[] args) throws IOException {
-        new ServerThread().start();
+        new ServerThread("cool",6666).start();
     }
 }
