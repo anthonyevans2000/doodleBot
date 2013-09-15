@@ -1,6 +1,7 @@
 package dataTypes;
 
 import java.util.ArrayList;
+import main.Main;
 
 public class NurbsCurve {
 	
@@ -62,4 +63,32 @@ public class NurbsCurve {
         knots.add(6,1.d);
         
     }
+        
+        public void printCurve() {
+            for(int i = 0; i < controlX.size(); i++) {
+                System.out.println(" " + i );
+                System.out.println(controlX.get(i)+ ", " + controlY.get(i));
+            }
+        }
+        
+        public NurbsCurve cloneCurve() {
+            NurbsCurve ans = new NurbsCurve();
+            ans.controlX = (ArrayList<Short>) controlX.clone();
+            ans.controlY = (ArrayList<Short>) controlY.clone();
+            ans.knots = (ArrayList<Double>) knots.clone();
+            return ans;
+        }
+        
+        public NurbsCurve convert2PrintCoords() {
+            NurbsCurve ans = new NurbsCurve();
+            for(int i = 0; i < controlX.size(); i++) {
+                ans.controlX.set(i, (short)((controlX.get(i) - Main.canvasXDim/2)*Main.xConvertMultiplier));
+                ans.controlY.set(i, (short)((controlY.get(i) - Main.canvasYDim/2)*Main.yConvertMultiplier));
+            }
+            ans.knots = (ArrayList<Double>) knots.clone();
+            for(int i = 0; i < ans.controlX.size(); i ++) {
+                System.out.println("CP X: " + ans.controlX.get(i) + " Y :" + ans.controlY.get(i));
+            }
+            return ans; 
+        }
 }

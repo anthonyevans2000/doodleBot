@@ -2,100 +2,145 @@ package communication;
 import dataTypes.CurveVelocity;
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.ArrayList;
 import main.Main;
 
 
+/**
+ * A server that feeds velocity commands to a robot upon a request for them.
+ * The server will ignore incoming communications until there is a command to be sent,
+ * indicated by the ArrayList '_profiles' containing a value.
+ * It will then accept a header request and return the header for the command.
+ * It will then proceed to accept instruction requests and serve the corresponding instructions.
+ * If a request for a -1 instruction is received, the server will remove itself from the serving
+ * loop, delete the instruction it was sending from '_profiles' and begin awaiting header requests again.
+ * @author anthony
+ */
+public class ServerThread implements Runnable {
+	
+    public DatagramSocket _socket;
+    protected BufferedReader in = null;
+    public ArrayList<CurveVelocity> _profiles = new ArrayList<CurveVelocity>();
 
-public class ServerThread extends Thread {
-	
-	//Server Variables
-	//ServerSocket DataServer;
-	public DatagramSocket _socket;
-	protected BufferedReader in = null;
-	//public DataInputStream is = null;
-	private boolean terminateRequested = false;
-	
-	
-	public ServerThread() throws IOException {
-		this("ServerThread",6666);
+
+    public ServerThread() throws IOException {
+            this("ServerThread",6666);
     }
 	
     public ServerThread(String name, int portNumber) throws IOException {
-        super(name);
+        //super(name);
         _socket = new DatagramSocket(portNumber);
-        //Should run a check on the integrity of the data to be sent here
 	}
     
-    public void initialiseConnection() throws IOException{
-
-        
-    }
-    
-
-    /**
-     * This function will serve velocity instructions upon receipt of a request packet.
-     * Currently will remain in the loop until out of instructions. Probably should 
-     * separate out the thread so more processing can take place in the background
-     * @param profile Velocity profile to transmit
-     * @param port The transmitting port
-     * @throws IOException 
-     */
-    public void serveInstruction(CurveVelocity profile, int port) throws IOException {
-
-        /*HEADER
-         * "H"
-         * "I"
-         * X clkwise boundary (short)
-         * X Cclockwise (short)
-         * Y clkwise boundary (short)
-         * Y Cclockwise (short)
-         * 
-         */
-        
-        /*
-         * Data Transfer
-         * Requested command number (from zero) (short)
-         *  If -1 -> transfer complete.
-         */
+    @Override
+    public void run() {
         
         byte[] buf = new byte[Main.packetBufferLength];
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
         
-        _socket.receive(packet);
-        
-        String decoded = new String(packet.getData(), "UTF-8");
-        System.out.println(decoded);
-        
-        //Send header
-        DoodlePacket header = new DoodlePacket();
-        header.header((short)50, (short)100, (short)1000, (short)1000, (short)profile._xVel.size(), (short)60, packet.getAddress(), Main.plcPortNumber);
-        _socket.send(header._packet);
-        System.out.println("Sent header");
-        
-        //Wait for packet before sending another
-        _socket.receive(packet);
-        
-        //Send move instruction
-        DoodlePacket moveInstruction = new DoodlePacket();
-        moveInstruction.instructionConstructor((short)0, profile._xInitial, profile._yInitial);
-        _socket.send(moveInstruction._packet);
-     
-        System.out.println("Entering send-loop");
-        int i = 0;
-        while(i< profile._xVel.size()) {
-            //need to do sanity checking and logic on recieved packet    
-            _socket.receive(packet);
+        char command;
+        byte[] receivedData;
+        short requestedCommand;
+        byte currentCurve = Byte.MAX_VALUE;
+        boolean firstHeader = true;
+
+        while (!Main.readyToQuit) {       
+            try {
+                if(Main.commsReset) {
+                    System.out.println("Resetting Server queue");
+                    _profiles.clear();
+                    firstHeader = true;
+                    Main.commsReset = false;
+                }
+                
+                //Wait for a packet
+                _socket.setSoTimeout(Main.socketTimeout);
+                _socket.receive(packet);
+                String rcvd = "rcvd from " + packet.getAddress() + ", " + packet.getPort() + ": "+ new String(packet.getData(), 0, packet.getLength());
+                System.out.println(rcvd);
+                //printData(packet.getData());
+                
+                //If _profiles is empty, continue waiting for headers
+                if(_profiles.size() < 1) {
+                    continue;
+                }else {
+                    //Analyse request
+                    receivedData = packet.getData();
+                    command = getCommand(receivedData);
+                    requestedCommand = getShort(receivedData);
+                    System.out.println("Command: " + command + " Req instruction: " + requestedCommand);
+                    
+                    if(command == 'H') {
+                        if(firstHeader) {
+                            currentCurve = receivedData[1];
+                            firstHeader = false;
+                        }
+                        if(currentCurve != receivedData[1]){
+                            _profiles.remove(0);
+                            currentCurve = receivedData[1];
+                            if(_profiles.isEmpty()) continue;
+                        }
+                        //Send header   
+                        DoodlePacket header = new DoodlePacket();
+                        header.header(Main.maxAccelX, Main.maxAccelY, Main.maxVelX, Main.maxVelY, (short) _profiles.get(0)._xVel.size(), Main.timeStep, packet.getAddress(), Main.plcPortNumber);
+                        _socket.send(header._packet);
+                    }
+                    if(command == 'A') {
+
+                        if(requestedCommand == 0) {
+                            //Send move instruction
+                            System.out.println(requestedCommand + ", x: " + _profiles.get(0)._xInitial + ", y: " + _profiles.get(0)._yInitial);
+                            DoodlePacket moveInstruction = new DoodlePacket();
+                            moveInstruction.instruction(requestedCommand, (short)0, _profiles.get(0)._xInitial, _profiles.get(0)._yInitial,  packet.getAddress(), Main.plcPortNumber);
+                            _socket.send(moveInstruction._packet);
+                        }
+                        else if(requestedCommand > 0 && requestedCommand < _profiles.get(0)._xVel.size()) {
+                            System.out.println(requestedCommand + ", x: " + _profiles.get(0)._xVel.get(requestedCommand) + ", y: " + _profiles.get(0)._yVel.get(requestedCommand) );
+                            DoodlePacket instruction = new DoodlePacket();
+                            instruction.instruction(requestedCommand, (short)1, _profiles.get(0)._xVel.get(requestedCommand), _profiles.get(0)._yVel.get(requestedCommand), packet.getAddress(), Main.plcPortNumber);
+                            _socket.send(instruction._packet);
+                        }
+                    }
+                }
+            }
+            catch (SocketTimeoutException e) {
+                // timeout exception. 
+                continue; 
+            } catch (IOException e) {
             
-            System.out.println(i);
-            
-            DoodlePacket instruction = new DoodlePacket();
-            //TODO: This should work for our purposes, but maybe set the IP address in the initialisation step
-            instruction.instruction((short)1, profile._xVel.get(i), profile._yVel.get(i), packet.getAddress(), port);
-            _socket.send(instruction._packet);
-            i++;
+            }
+        
         }
+        //Quitting
+        _socket.close();
+    }
+    
+    
+    short getShort(byte[] received) {
+        ByteBuffer bb = ByteBuffer.allocate(2);
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        bb.put(received[1]);
+        bb.put(received[2]);
+        short shortVal = bb.getShort(0);
+        return shortVal;
+    }
+    
+    char getCommand(byte[] received) {
+        String rec = new String(received, 0, received.length);
+        return rec.charAt(0);
+    }
+    
+    void printData (byte[] data) {
         
-        
+        System.out.println("Received data");
+        for (byte b : data)
+        {
+            // Add 0x100 then skip char(0) to left-pad bits with zeros
+            System.out.println(Integer.toBinaryString(0x100 + b).substring(1));
+        }
+        System.out.println("End Received Data");    
     }
 
     

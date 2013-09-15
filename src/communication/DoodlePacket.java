@@ -33,8 +33,8 @@ public class DoodlePacket {
         _packet = new DatagramPacket(headerData, headerData.length, address, port);
     }
     
-    public void instruction(short zBool, short xPosVel, short yPosVel, InetAddress address, int port) {
-        byte[] instructionData = instructionConstructor(zBool, xPosVel, yPosVel);
+    public void instruction(short commandNumber, short zBool, short xPosVel, short yPosVel, InetAddress address, int port) {
+        byte[] instructionData = instructionConstructor(commandNumber, zBool, xPosVel, yPosVel);
         _packet = new DatagramPacket(instructionData, instructionData.length, address, port);
     }
     
@@ -45,7 +45,7 @@ public class DoodlePacket {
         out.close();
         byte[] int_bytes = bos.toByteArray();
         bos.close();
-        return int_bytes;
+        return  int_bytes;
     }
     
     public byte[] headerConstructor(short maxAccX, short maxAccY, short maxSpeedX, short maxSpeedY, short nCommands, short deltaT){
@@ -67,15 +67,22 @@ public class DoodlePacket {
         return data;
     }
     
-    public byte[] instructionConstructor(short zBool, short xPosVel, short yPosVel)
+    public byte[] instructionConstructor(short commandNumber, short zBool, short xPosVel, short yPosVel)
     {
         //If Z is 1 - X and Y are velocities. if it is 0, X and Y are positions
-        byte[] data = new byte[5];
-        data[0] = (byte)(zBool & 0x01);
-        data[2] = (byte)((xPosVel >> 8) & 0xFF);
-        data[1] = (byte)(xPosVel & 0xFF);
-        data[4] = (byte)((yPosVel >> 8) & 0xFF);
-        data[3] = (byte)(yPosVel & 0xFF);
+        byte[] data = new byte[7];
+        data[1] = (byte)((commandNumber >> 8) & 0xFF);
+        data[0] = (byte)(commandNumber & 0xFF);
+        data[2] = (byte)(zBool & 0x01);
+        data[4] = (byte)((xPosVel >> 8) & 0xFF);
+        data[3] = (byte)(xPosVel & 0xFF);
+        data[6] = (byte)((yPosVel >> 8) & 0xFF);
+        data[5] = (byte)(yPosVel & 0xFF);
+         for (byte b : data)
+    {
+        // Add 0x100 then skip char(0) to left-pad bits with zeros
+        System.out.println(Integer.toBinaryString(0x100 + b).substring(1));
+    }
         return data;
     }
 }

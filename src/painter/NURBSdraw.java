@@ -1,6 +1,5 @@
 package painter;
 
-import dataTypes.CurveVelocity;
 import dataTypes.NurbsCurve;
 import javax.swing.SwingUtilities;
 import javax.swing.JFrame;
@@ -16,8 +15,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.geom.GeneralPath;
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.ArrayList;
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
@@ -25,11 +23,6 @@ import javax.swing.KeyStroke;
 import main.Main;
 import static main.Main._matlab;
 import static main.Main.drawCurve;
-import static main.Main.plcPortNumber;
-import static main.Main.sPoints;
-import static main.Main.timeStep;
-import matlabcontrol.MatlabConnectionException;
-import matlabcontrol.MatlabInvocationException;
 
 
 public class NURBSdraw{
@@ -46,6 +39,7 @@ public class NURBSdraw{
 }
 class MyPanel extends JPanel {
 
+    private ArrayList<NurbsCurve> _drawn = new ArrayList<NurbsCurve>();
     private int squareX = 50;
     private int squareY = 50;
     private int squareW = 20;
@@ -73,28 +67,38 @@ class MyPanel extends JPanel {
         ActionMap am = getActionMap();
 
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "onEnter");
-        
-        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, 0), "onC");
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_Q, 0), "onQuit");
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, 0), "onCurveReset");
 
         am.put("onEnter", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 // Enter pressed
-                try {
-                    CurveVelocity profile = _matlab.processNURBS(drawCurve, sPoints, timeStep);
-                    Main._server.serveInstruction(profile, plcPortNumber);
+                _drawn.add(Main.drawCurve.cloneCurve());
                 
-                
-                } catch (MatlabConnectionException ex) {
-                    Logger.getLogger(MyPanel.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (MatlabInvocationException ex) {
-                    Logger.getLogger(MyPanel.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (IOException ex) {
-                    Logger.getLogger(MyPanel.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                Main._matlab._toProcess.add(drawCurve.convert2PrintCoords());
+            }});
+        
+            am.put("onCurveReset", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Reset (r) pressed
+               Main.curveReset = true;
+               Main.commsReset = true;
+               _drawn.clear();
+               
+               repaint();
             }
             });
-        
+            
+            am.put("onQuit", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Reset (r) pressed
+               Main.readyToQuit = true;
+               System.exit(0);
+            }
+            });        
         
         
     }
@@ -137,21 +141,16 @@ class MyPanel extends JPanel {
     
     private void paintNURBS(Graphics2D g, NurbsCurve curve)
     {
+
+        //Draw previous
+        for(int i = 0; i < _drawn.size() ; i++) {
+            drawPath(g , _drawn.get(i));
+        }
         
-        GeneralPath path = new GeneralPath();
         
-        
-        path.moveTo (curve.controlX.get(0), curve.controlY.get(0));
-        
-        path.curveTo(   curve.controlX.get(1),
-                        curve.controlY.get(1),
-                        curve.controlX.get(2),
-                        curve.controlY.get(2),
-                        curve.controlX.get(3),
-                        curve.controlY.get(3));
-        
-        g.draw(path);
-        
+        //Draw current
+
+        drawPath(g,curve);
         g.setColor(Color.RED);
                 
         g.drawRect( curve.controlX.get(0),
@@ -170,9 +169,23 @@ class MyPanel extends JPanel {
     };
     
 
+    void drawPath(Graphics2D g, NurbsCurve curve) {
+        GeneralPath path = new GeneralPath();
+        path.moveTo (curve.controlX.get(0), curve.controlY.get(0));
+        
+        path.curveTo(   curve.controlX.get(1),
+                        curve.controlY.get(1),
+                        curve.controlX.get(2),
+                        curve.controlY.get(2),
+                        curve.controlX.get(3),
+                        curve.controlY.get(3));
+        
+        g.draw(path);
+        
+    }
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension(600,600);
+        return new Dimension((int)Main.canvasXDim,(int)Main.canvasYDim);
     }
     
     @Override
@@ -181,13 +194,7 @@ class MyPanel extends JPanel {
         
         Graphics2D g2 = (Graphics2D) g;
         setBackground(Color.WHITE);
-        
-//        g.drawString("This is my custom Panel!",10,20);
-//        g.setColor(Color.RED);
-//        g.fillRect(squareX,squareY,squareW,squareH);
-//        g.setColor(Color.BLACK);
-//        g.drawRect(squareX,squareY,squareW,squareH);
-//        g.drawLine(squareX, squareY, squareW+squareX, squareH+squareY);
+
         paintNURBS(g2,Main.drawCurve);
     }  
 }
