@@ -26,7 +26,7 @@ import matlabcontrol.extensions.MatlabTypeConverter;
 public class MatInterface implements Runnable{
         
     public final String matAddress = "/home/anthony/.MATLAB/bin/matlab"; //Where your matlab binary file is
-    public final String codeAddress = "\'/home/anthony/Dropbox/DoodleBot/Design/Modules/3 Path Generation - PC/code/ControlToys\'";
+    public final String codeAddress = "\'/home/anthony/Dropbox/DoodleBot/Design/Modules/99 Agregate Code Spot\'";
     
     public MatlabProxy _proxy;
     
@@ -58,6 +58,11 @@ public class MatInterface implements Runnable{
                     System.out.println("Resetting Matlab queue");
                     _toProcess.clear();
                     Main.curveReset = false;
+                }
+                
+                if(Main.processImage){
+                    processImage();
+                    Main.processImage = false;
                 }
 
                 
@@ -107,8 +112,8 @@ public class MatInterface implements Runnable{
         
         for( int i = 0; i < xVel[0].length; i++) {
             
-            xVel[0][i] = 50*xVel[0][i];
-            yVel[0][i] = 50*yVel[0][i];
+            //Vel[0][i] = xVel[0][i];
+            //yVel[0][i] = yVel[0][i];
             
             xVelInt[0][i] = (short) xVel[0][i];
             yVelInt[0][i] = (short) yVel[0][i];
@@ -117,6 +122,35 @@ public class MatInterface implements Runnable{
         CurveVelocity ans = new CurveVelocity(xVelInt,yVelInt, curve.controlX.get(0), curve.controlY.get(0));
         
         return ans;
+    }
+    
+    private void processImage() throws MatlabInvocationException {
+        System.out.println("Beginning Processing");
+        MatlabTypeConverter processor = new MatlabTypeConverter(_proxy);
+        
+        _proxy.eval("img2splines;");
+        
+        double[][] nSplines = processor.getNumericArray("nSplines").getRealArray2D();
+        
+        for(int i = 1; i < nSplines[0][0]; i++) {
+            ArrayList<Short> x = new ArrayList<Short>();
+            ArrayList<Short> y = new ArrayList<Short>();
+            ArrayList<Double> k = new ArrayList<Double>();
+            
+            double[][] cp = processor.getNumericArray("cp{" + i + "}").getRealArray2D();
+            double[][] knots = processor.getNumericArray("knots{" + i + "}").getRealArray2D();
+            
+            for(int j = 0; j < cp.length; j++){
+                x.add((short)cp[j][0]);
+                y.add((short)cp[j][1]);
+            }
+            for(int j = 0; j < knots[0].length; j++) {
+                k.add(knots[0][j]);
+            }
+            _toProcess.add(new NurbsCurve(x,y,k));
+            //TODO: Consider addding to canvas object as well.
+        }
+        System.out.println(nSplines[0][0] + " added to Queue");
     }
     
     public void quit() throws MatlabInvocationException {

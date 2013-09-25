@@ -22,7 +22,7 @@ public class TestServer {
         
         while(true) {
             if(_server._profiles.isEmpty()) {
-                _server._profiles.add(new dataTypes.CurveVelocity());
+                _server._profiles.add(dataTypes.CurveVelocity.circularCurveTest());
             }
             Thread.sleep(4000);
         }

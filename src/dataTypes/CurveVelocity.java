@@ -33,7 +33,7 @@ public class CurveVelocity {
         }
     }
     
-    public CurveVelocity circularCurveTest() {
+    public static CurveVelocity circularCurveTest() {
         CurveVelocity ans = new CurveVelocity();
         ans._xInitial = 0;
         ans._yInitial = 0;

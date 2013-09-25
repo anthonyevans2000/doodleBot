@@ -69,15 +69,16 @@ class MyPanel extends JPanel {
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "onEnter");
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_Q, 0), "onQuit");
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, 0), "onCurveReset");
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_I, 0), "onImageProcess");
+        
+            am.put("onEnter", new AbstractAction() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    // Enter pressed
+                    _drawn.add(Main.drawCurve.cloneCurve());
 
-        am.put("onEnter", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // Enter pressed
-                _drawn.add(Main.drawCurve.cloneCurve());
-                
-                Main._matlab._toProcess.add(drawCurve.convert2PrintCoords());
-            }});
+                    Main._matlab._toProcess.add(drawCurve.convert2PrintCoords());
+                }});
         
             am.put("onCurveReset", new AbstractAction() {
             @Override
@@ -90,6 +91,15 @@ class MyPanel extends JPanel {
                repaint();
             }
             });
+            
+            am.put("onImageProcess", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Image (i) pressed
+               Main.processImage = true;
+            }
+            });
+            
             
             am.put("onQuit", new AbstractAction() {
             @Override

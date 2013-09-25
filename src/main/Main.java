@@ -14,7 +14,7 @@ import painter.NURBSdraw;
 
 /**
  *
- * @author anthony
+ * @author
  */
 public class Main {
     
@@ -25,16 +25,19 @@ public class Main {
     public static final int socketTimeout = 100;
     
     public static final int sPoints = 100;
-    public static final short timeStep = 60;
+    public static final short timeStep = 100;
     public static final double timeStepDouble = timeStep*1.0/1000;
-    public static final double maxTorqueX = 1000;
-    public static final double maxTorqueY = 1000;
     
     
-    public static final short maxAccelX = 50;
-    public static final short maxAccelY = 100;
+    public static final short maxAccelX = 2;
+    public static final short maxAccelY = 1;
     public static final short maxVelX = 1000;
     public static final short maxVelY = 1000;
+    
+    public static final double maxTorqueX = 950*maxAccelX;
+    public static final double maxTorqueY = 1000*maxAccelY;
+   
+
     
     public static NurbsCurve drawCurve = new NurbsCurve();
     
@@ -42,6 +45,7 @@ public class Main {
     public static boolean readyToQuit = false;
     public static boolean commsReset = false;
     public static boolean curveReset = false;
+    public static boolean processImage = false;
     
     public static final double canvasXDim = 1000;
     public static final double canvasYDim = 500;
