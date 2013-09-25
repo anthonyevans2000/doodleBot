@@ -15,35 +15,35 @@ public class NURBS
 {
     NURBSPanel nurbsPanel;
     JFrame f;
-    //JPanel south;
+    JPanel east;
  
     public NURBS()
     {
-        //south = new JPanel(new GridLayout(0,1));
+        east = new JPanel(new GridLayout(0,1));
         f = new JFrame();
         f.setJMenuBar(getMenuBar());
-        //f.add(south, "South");
-        setGUI("weight test");
+        f.add(east, "East");
+        setGUI();
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         f.setSize(1370,750);
         f.setLocation(0,0);
         f.setVisible(true);
     }
  
-    private void setGUI(String id)
+    private void setGUI()
     {
-        //south.removeAll();
+        east.removeAll();
         if(nurbsPanel != null)
             f.remove(nurbsPanel);
-        nurbsPanel = new NURBSPanel(id);
+        nurbsPanel = new NURBSPanel();
         PointManager pointManager = new PointManager(nurbsPanel);
         nurbsPanel.addMouseListener(pointManager);
         nurbsPanel.addMouseMotionListener(pointManager);
-        //KnotDisplay knotDisplay = new KnotDisplay(nurbsPanel);
-        //WeightsPanel weightsPanel = new WeightsPanel(nurbsPanel);
-        //south.add(knotDisplay);
-        //south.add(weightsPanel);
-        //south.revalidate();
+        KnotDisplay knotDisplay = new KnotDisplay(nurbsPanel);
+        WeightsPanel weightsPanel = new WeightsPanel(nurbsPanel);
+        east.add(knotDisplay);
+        east.add(weightsPanel);
+        east.revalidate();
         f.add(nurbsPanel);
         f.validate();
         nurbsPanel.firstTime = true;
@@ -59,18 +59,10 @@ public class NURBS
             public void actionPerformed(ActionEvent e)
             {
                 JMenuItem item = (JMenuItem)e.getSource();
-                String ac = item.getActionCommand();
-                setGUI(ac);
+                setGUI();
             }
         };
-        String[] s = { "weight test", "circle 1", "circle 2" };
-        for(int j = 0; j < s.length; j++)
-        {
-            JMenuItem item = new JMenuItem(s[j]);
-            item.setActionCommand(s[j]);
-            item.addActionListener(l);
-            menu.add(item);
-        }
+        
         JMenuBar menuBar = new JMenuBar();
         menuBar.add(menu);
         return menuBar;
@@ -103,7 +95,7 @@ class NURBSPanel extends JPanel
             Y_MAX  = 10;
 
 
-        public NURBSPanel(String dataSet)
+        public NURBSPanel()
         {
             curve = new GeneralPath();
             nf = NumberFormat.getInstance();
@@ -517,436 +509,211 @@ class PointManager extends MouseInputAdapter
     }
 }
 
-
-
 class KnotDisplay extends JPanel
-
 {
+    NURBSPanel nurbsPanel;
+    JTable table;
+    JSlider slider;
+    double scale;   
+    boolean valueIsAdjusting;
+    int selectedIndex;
 
-NURBSPanel nurbsPanel;
+    public KnotDisplay(NURBSPanel np)
+    {
+        nurbsPanel = np;
+        valueIsAdjusting = false;
+        selectedIndex = 0;
+        setBorder(BorderFactory.createTitledBorder("knots"));
+        setLayout(new BorderLayout());
+        add(getTable(), "North");
+        add(getSlider());
+        add(getRadioPanel(), "South");
+    }
 
-JTable table;
+    private void changeSelection()
+    {
+        // reset slider values
+        double lo = nurbsPanel.knots[selectedIndex-1];
+        double hi = nurbsPanel.knots[selectedIndex+1];
+        scale = Math.rint((hi - lo) * 1000);
+        int min = (int)(lo * scale);
+        int max = (int)(hi * scale);
+        boolean enabled = true;
+        if(max - min == 0) enabled = false;
+        slider.setEnabled(enabled);
+        int value = (int)(nurbsPanel.knots[selectedIndex] * scale);
+        valueIsAdjusting = true;
+        slider.setMinimum(min);
+        slider.setMaximum(max);
+        slider.setValue(value);
+        valueIsAdjusting = false;
+    }
 
-JSlider slider;
-
-double scale;
-
-boolean valueIsAdjusting;
-
-int selectedIndex;
 
 
-
-public KnotDisplay(NURBSPanel np)
-
-{
-
-nurbsPanel = np;
-
-valueIsAdjusting = false;
-
-selectedIndex = 4;
-
-setBorder(BorderFactory.createTitledBorder("knots"));
-
-setLayout(new BorderLayout());
-
-add(getTable(), "North");
-
-add(getSlider());
-
-add(getRadioPanel(), "South");
-
+    private JTable getTable()
+    {
+    String[] headers = new String[3];
+    Object[][]data = new Object[1][3];
+    for(int col = 0; col < data[0].length; col++)
+    {
+        headers[col] = "";  
+        data[0][col] = String.valueOf(1);   
+    }
+    table = new JTable(new DefaultTableModel(data, headers));
+    TableCellRenderer renderer = table.getDefaultRenderer(String.class);
+    ((JLabel)renderer).setHorizontalAlignment(JLabel.CENTER);
+    table.setEnabled(false);
+    return table;
 }
 
+    private JSlider getSlider()
+    {
+        double lo = 1;
+        double hi = 100;
+        scale = Math.rint((hi - lo) * 1000);
+        int min = (int)(lo * scale);
+        int max = (int)(hi * scale);
+        int value = (int)(5 * scale);
+        slider = new JSlider(JSlider.HORIZONTAL, min, max, value);
+        if(max - min == 0)
+        slider.setEnabled(false);
+        return slider;
+    }
 
-
-
-private void changeSelection()
-
-{
-
-// reset slider values
-
-double lo = nurbsPanel.knots[selectedIndex-1];
-
-double hi = nurbsPanel.knots[selectedIndex+1];
-
-scale = Math.rint((hi - lo) * 1000);
-
-int min = (int)(lo * scale);
-
-int max = (int)(hi * scale);
-
-boolean enabled = true;
-
-if(max - min == 0)
-
-enabled = false;
-
-slider.setEnabled(enabled);
-
-int value = (int)(nurbsPanel.knots[selectedIndex] * scale);
-
-valueIsAdjusting = true;
-
-slider.setMinimum(min);
-
-slider.setMaximum(max);
-
-slider.setValue(value);
-
-valueIsAdjusting = false;
-
+    private JPanel getRadioPanel()
+    {
+        final JRadioButton[] buttons = new JRadioButton[4];
+        ButtonGroup group = new ButtonGroup();
+        ActionListener l = new ActionListener()
+        {
+            public void actionPerformed(ActionEvent e)
+            {
+                JRadioButton radio = (JRadioButton)e.getSource();
+                int index = -1;
+                for(int j = 0; j < buttons.length; j++)
+                    if(radio == buttons[j])
+                    {
+                        selectedIndex = j;
+                        break;
+                    }
+                changeSelection();
+            }
+        };
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();  
+        gbc.weightx = 1.0;
+        for(int j = 0; j < 4; j++)
+        {
+            buttons[j] = new JRadioButton();
+            group.add(buttons[j]);
+            buttons[j].addActionListener(l);
+            panel.add(buttons[j], gbc);
+        }
+        buttons[0].setEnabled(false);
+        buttons[buttons.length-1].setEnabled(false);
+        buttons[selectedIndex].setSelected(true);
+        return panel;
+    }
 }
-
-
-
-private JTable getTable()
-
-{
-
-String[] headers = new String[nurbsPanel.knots.length];
-
-Object[][]data = new Object[1][nurbsPanel.knots.length];
-
-for(int col = 0; col < data[0].length; col++)
-
-{
-
-headers[col] = "";
-
-data[0][col] = String.valueOf(nurbsPanel.knots[col]);
-
-}
-
-table = new JTable(new DefaultTableModel(data, headers));
-
-TableCellRenderer renderer = table.getDefaultRenderer(String.class);
-
-((JLabel)renderer).setHorizontalAlignment(JLabel.CENTER);
-
-table.setEnabled(false);
-
-return table;
-
-}
-
-
-
-private JSlider getSlider()
-
-{
-
-double lo = nurbsPanel.knots[selectedIndex-1];
-
-double hi = nurbsPanel.knots[selectedIndex+1];
-
-scale = Math.rint((hi - lo) * 1000);
-
-int min = (int)(lo * scale);
-
-int max = (int)(hi * scale);
-
-int value = (int)(nurbsPanel.knots[selectedIndex] * scale);
-
-slider = new JSlider(JSlider.HORIZONTAL, min, max, value);
-
-if(max - min == 0)
-
-slider.setEnabled(false);
-
-return slider;
-
-}
-
-
-
-private JPanel getRadioPanel()
-
-{
-
-final JRadioButton[] buttons = new JRadioButton[nurbsPanel.knots.length];
-
-ButtonGroup group = new ButtonGroup();
-
-ActionListener l = new ActionListener()
-
-{
-
-public void actionPerformed(ActionEvent e)
-
-{
-
-JRadioButton radio = (JRadioButton)e.getSource();
-
-int index = -1;
-
-for(int j = 0; j < buttons.length; j++)
-
-if(radio == buttons[j])
-
-{
-
-selectedIndex = j;
-
-break;
-
-}
-
-changeSelection();
-
-}
-
-};
-
-JPanel panel = new JPanel(new GridBagLayout());
-
-GridBagConstraints gbc = new GridBagConstraints();
-
-gbc.weightx = 1.0;
-
-for(int j = 0; j < nurbsPanel.knots.length; j++)
-
-{
-
-buttons[j] = new JRadioButton();
-
-group.add(buttons[j]);
-
-buttons[j].addActionListener(l);
-
-panel.add(buttons[j], gbc);
-
-}
-
-buttons[0].setEnabled(false);
-
-buttons[buttons.length-1].setEnabled(false);
-
-buttons[selectedIndex].setSelected(true);
-
-return panel;
-
-}
-
-}
-
-
 
 class WeightsPanel extends JPanel
-
 {
-
-NURBSPanel nurbsPanel;
-
-JTable table;
-
-JSlider slider;
-
-double scale;
-
-boolean valueIsAdjusting;
-
-int selectedIndex;
-
-
-
-public WeightsPanel(NURBSPanel np)
-
-{
-
-nurbsPanel = np;
-
-valueIsAdjusting = false;
-
-selectedIndex = 2;
-
-setBorder(BorderFactory.createTitledBorder("weights"));
-
-setLayout(new BorderLayout());
-
-add(getTable(), "North");
-
-add(getSlider());
-
-add(getRadioPanel(), "South");
-
-}
-
-
-
-private void changeSelection()
-
-{
-
-// reset slider value
-
-double weight = nurbsPanel.points[selectedIndex][2];
-
-setScale(weight);
-
-int value = (int)(weight * scale);
-
-valueIsAdjusting = true;
-
-slider.setValue(value);
-
-valueIsAdjusting = false;
-
-}
-
-
-
-private void setScale(double weight)
-
-{
-
-if(weight < 1.0)
-
-scale = slider.getMaximum()/5;
-
-else
-
-scale = 2.0;
-
-}
-
-
-
-private JTable getTable()
-
-{
-
-String[] headers = new String[nurbsPanel.points.length];
-
-Object[][]data = new Object[1][nurbsPanel.points.length];
-
-for(int col = 0; col < data[0].length; col++)
-
-{
-
-headers[col] = "";
-
-data[0][col] = String.valueOf(nurbsPanel.points[col][2]);
-
-}
-
-table = new JTable(new DefaultTableModel(data, headers));
-
-TableCellRenderer renderer = table.getDefaultRenderer(String.class);
-
-((JLabel)renderer).setHorizontalAlignment(JLabel.CENTER);
-
-table.setEnabled(false);
-
-return table;
-
-}
-
-
-
-private JSlider getSlider()
-
-{
-
-double weight = nurbsPanel.points[selectedIndex][2];
-
-setScale(weight);
-
-int value = (int)(weight * scale);
-
-slider = new JSlider(JSlider.HORIZONTAL, 0, 50, value);
-
-slider.addChangeListener(new ChangeListener()
-
-{
-
-public void stateChanged(ChangeEvent e)
-
-{
-
-if(!valueIsAdjusting)
-
-{
-
-double value = slider.getValue() / scale;
-
-
-}
-
-}
-
-});
-
-return slider;
-
-}
-
-
-
-private JPanel getRadioPanel()
-
-{
-
-final JRadioButton[] buttons = new JRadioButton[nurbsPanel.points.length];
-
-ButtonGroup group = new ButtonGroup();
-
-ActionListener l = new ActionListener()
-
-{
-
-public void actionPerformed(ActionEvent e)
-
-{
-
-JRadioButton radio = (JRadioButton)e.getSource();
-
-int index = -1;
-
-for(int j = 0; j < buttons.length; j++)
-
-if(radio == buttons[j])
-
-{
-
-selectedIndex = j;
-
-break;
-
-}
-
-changeSelection();
-
-}
-
-};
-
-JPanel panel = new JPanel(new GridBagLayout());
-
-GridBagConstraints gbc = new GridBagConstraints();
-
-gbc.weightx = 1.0;
-
-for(int j = 0; j < nurbsPanel.points.length; j++)
-
-{
-
-buttons[j] = new JRadioButton();
-
-group.add(buttons[j]);
-
-buttons[j].addActionListener(l);
-
-panel.add(buttons[j], gbc);
-
-}
-
-buttons[selectedIndex].setSelected(true);
-
-return panel;
-
-}
-
+    NURBSPanel nurbsPanel;  
+    JTable table;
+    JSlider slider;
+    double scale;
+    boolean valueIsAdjusting;
+    int selectedIndex;
+
+    public WeightsPanel(NURBSPanel np)
+    {
+        nurbsPanel = np;
+        valueIsAdjusting = false;
+        selectedIndex = 2;
+        setBorder(BorderFactory.createTitledBorder("weights"));
+        setLayout(new BorderLayout());
+        add(getTable(), "North");
+        add(getSlider());
+        add(getRadioPanel(), "South");
+    }
+    
+    private void changeSelection()
+    {
+        // reset slider value   
+        double weight = nurbsPanel.points[selectedIndex][2];
+        setScale(weight);
+        int value = (int)(weight * scale);
+        valueIsAdjusting = true;
+        slider.setValue(value);
+        valueIsAdjusting = false;
+    }
+
+    private void setScale(double weight)
+    {
+        if(weight < 1.0) scale = slider.getMaximum()/5;
+        else scale = 2.0;
+    }
+    
+    private JTable getTable()
+    {
+        String[] headers = new String[nurbsPanel.points.length];
+        Object[][]data = new Object[1][nurbsPanel.points.length];
+        for(int col = 0; col < data[0].length; col++)
+        {
+            headers[col] = "";
+            data[0][col] = String.valueOf(nurbsPanel.points[col][2]);
+        }
+        table = new JTable(new DefaultTableModel(data, headers));
+        TableCellRenderer renderer = table.getDefaultRenderer(String.class);
+        ((JLabel)renderer).setHorizontalAlignment(JLabel.CENTER);
+        table.setEnabled(false);
+        return table;
+    }
+
+    private JSlider getSlider()
+    {
+        double weight = 4;
+        setScale(weight);
+        int value = (int)(weight * scale);
+        slider = new JSlider(JSlider.HORIZONTAL, 0, 50, value);
+        slider.addChangeListener(new ChangeListener()
+        {
+            @Override
+            public void stateChanged(ChangeEvent e)
+            {
+                if(!valueIsAdjusting)
+                {
+                    double value = slider.getValue() / scale;
+                }
+            }
+        });
+
+        return slider;
+    }
+
+    private JPanel getRadioPanel()
+    {
+        final JRadioButton[] buttons = new JRadioButton[nurbsPanel.points.length];
+        ButtonGroup group = new ButtonGroup();
+        ActionListener l = new ActionListener()
+        {
+            public void actionPerformed(ActionEvent e)
+            {
+                JRadioButton radio = (JRadioButton)e.getSource();
+                int index = -1;
+                for(int j = 0; j < buttons.length; j++)
+                    if(radio == buttons[j])
+                    {
+                        selectedIndex = j;
+                        break;
+                    }
+                changeSelection();
+            }
+        };
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.weightx = 1.0;
+        return panel;
+    }
 }
