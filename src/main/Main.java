@@ -10,7 +10,7 @@ import dataTypes.NurbsCurve;
 import java.io.IOException;
 import matlabcontrol.MatlabConnectionException;
 import matlabcontrol.MatlabInvocationException;
-import painter.NURBSdraw;
+import painter.NURBS;
 
 /**
  *
@@ -25,7 +25,7 @@ public class Main {
     public static final int socketTimeout = 100;
     
     public static final int sPoints = 100;
-    public static final short timeStep = 100;
+    public static final short timeStep = 60;
     public static final double timeStepDouble = timeStep*1.0/1000;
     
     
@@ -47,16 +47,16 @@ public class Main {
     public static boolean curveReset = false;
     public static boolean processImage = false;
     
-    public static final double canvasXDim = 1000;
-    public static final double canvasYDim = 500;
-    
     public static final double xClkWiseLim = 4277;
     public static final double xAClkWiseLim = 4277;
     public static final double yClkWiseLim = 1676;
-    public static final double yAClkWiseLim = 1676;        
-            
-    public static final double xConvertMultiplier = (short)((2*xClkWiseLim)/canvasXDim);
-    public static final double yConvertMultiplier = (short)((2*yClkWiseLim)/canvasYDim);
+    public static final double yAClkWiseLim = 1676; 
+    
+    public static final int canvasX = 1370;
+    public static final int canvasY = 750;
+    
+    public static final double xDim = xClkWiseLim + xAClkWiseLim;
+    public static final double yDim = yClkWiseLim + yAClkWiseLim;   
             
     public static MatInterface _matlab;
     public static ServerThread _server;
@@ -73,7 +73,7 @@ public class Main {
         new Thread(_server).start();
         
          
-        NURBSdraw.createAndShowGUI();
+        new NURBS();
          
         
 

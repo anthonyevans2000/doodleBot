@@ -14,7 +14,6 @@ public class NurbsCurve {
             controlX = new ArrayList<Short>();
             controlY = new ArrayList<Short>();
             knots = new ArrayList<Double>();
-            initialiseNURBS();
         }
         
 	public NurbsCurve(ArrayList<Short> x,ArrayList<Short> y, ArrayList<Double> k)
@@ -43,27 +42,6 @@ public class NurbsCurve {
             return knot;
         }
         
-        public final void initialiseNURBS() {
-        
-        controlX.add((short)10);
-        controlY.add((short)10);
-        controlX.add((short)80);
-        controlY.add((short)80);
-        controlX.add((short)180);
-        controlY.add((short)100);
-        controlX.add((short)10);
-        controlY.add((short)100);
-        
-        knots.add(0,0.d);
-        knots.add(1,0.d);
-        knots.add(2,0.d);
-        knots.add(3,0.5);
-        knots.add(4,1.d);
-        knots.add(5,1.d);
-        knots.add(6,1.d);
-        
-    }
-        
         public void printCurve() {
             for(int i = 0; i < controlX.size(); i++) {
                 System.out.println(" " + i );
@@ -79,16 +57,27 @@ public class NurbsCurve {
             return ans;
         }
         
-        public NurbsCurve convert2PrintCoords() {
+        public void calculateKnots() {
+            int nKnots = controlX.size() -2;
+            knots.add(0.d);
+            knots.add(0.d);
+            knots.add(0.d);
+            for(int i = 1; i < nKnots; i++)
+            {
+                knots.add(1.0*i/nKnots);
+            }
+            knots.add(1.d);
+            knots.add(1.d);
+            knots.add(1.d);
+        }
+        
+        public static NurbsCurve convert2PrintCoords(double[][] curve, int canvasXDim, int canvasYDim) {
             NurbsCurve ans = new NurbsCurve();
-            for(int i = 0; i < controlX.size(); i++) {
-                ans.controlX.set(i, (short)((controlX.get(i) - Main.canvasXDim/2)*Main.xConvertMultiplier));
-                ans.controlY.set(i, (short)((controlY.get(i) - Main.canvasYDim/2)*Main.yConvertMultiplier));
+            for(int i = 0; i < curve.length; i++) {
+                ans.controlX.add(i, (short)((curve[i][0] - canvasXDim/2)*Main.xDim/canvasXDim));
+                ans.controlY.add(i, (short)((curve[i][1]  - canvasYDim/2)*Main.yDim/canvasYDim));
             }
-            ans.knots = (ArrayList<Double>) knots.clone();
-            for(int i = 0; i < ans.controlX.size(); i ++) {
-                System.out.println("CP X: " + ans.controlX.get(i) + " Y :" + ans.controlY.get(i));
-            }
+            ans.calculateKnots();
             return ans; 
         }
 }

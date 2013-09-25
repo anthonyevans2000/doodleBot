@@ -1,5 +1,6 @@
 package painter;
 
+import dataTypes.NurbsCurve;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.font.*;
@@ -10,29 +11,30 @@ import javax.swing.*;
 import static javax.swing.JComponent.WHEN_FOCUSED;
 import javax.swing.event.*;
 import javax.swing.table.*;
+import main.Main;
 
 public class NURBS
 {
     NURBSPanel nurbsPanel;
     JFrame f;
-    JPanel east;
- 
+    //JPanel east;
+   
     public NURBS()
     {
-        east = new JPanel(new GridLayout(0,1));
+       // east = new JPanel(new GridLayout(0,1));
         f = new JFrame();
         f.setJMenuBar(getMenuBar());
-        f.add(east, "East");
+        //f.add(east, "East");
         setGUI();
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        f.setSize(1370,750);
+        f.setSize(Main.canvasX,Main.canvasY);
         f.setLocation(0,0);
         f.setVisible(true);
     }
  
     private void setGUI()
     {
-        east.removeAll();
+        //east.removeAll();
         if(nurbsPanel != null)
             f.remove(nurbsPanel);
         nurbsPanel = new NURBSPanel();
@@ -41,9 +43,9 @@ public class NURBS
         nurbsPanel.addMouseMotionListener(pointManager);
         KnotDisplay knotDisplay = new KnotDisplay(nurbsPanel);
         WeightsPanel weightsPanel = new WeightsPanel(nurbsPanel);
-        east.add(knotDisplay);
-        east.add(weightsPanel);
-        east.revalidate();
+        //east.add(knotDisplay);
+        //east.add(weightsPanel);
+        //east.revalidate();
         f.add(nurbsPanel);
         f.validate();
         nurbsPanel.firstTime = true;
@@ -68,7 +70,7 @@ public class NURBS
         return menuBar;
     }
  
-    public static void main(String[] args)
+    public void main(String[] args)
     {
         new NURBS();
     }
@@ -78,6 +80,8 @@ class NURBSPanel extends JPanel
 {
         ArrayList<GeneralPath> completeCurves = new ArrayList<GeneralPath>();
         ArrayList<GeneralPath> printedCurves = new ArrayList<GeneralPath>();
+
+        ArrayList<double[][]> toPrint = new ArrayList<double[][]>();
 
         double[][] points = new double[0][];
         double[] knots;
@@ -102,6 +106,7 @@ class NURBSPanel extends JPanel
             nf.setMaximumFractionDigits(1);
             addComponentListener(new ComponentAdapter()
             {
+                @Override
                 public void componentResized(ComponentEvent e)
                 {
                     if(!firstTime)
@@ -122,6 +127,7 @@ class NURBSPanel extends JPanel
                     // Enter pressed
                     completeCurves.add(curve);
                     curve = new GeneralPath();
+                    toPrint.add(points);
                     points = new double[0][];
                     firstTime = true;
                     repaint();
@@ -133,11 +139,28 @@ class NURBSPanel extends JPanel
                 public void actionPerformed(ActionEvent e) {
                     // Enter pressed
                     printedCurves.addAll(completeCurves);
+                    for(int i = 0; i < toPrint.size(); i++)
+                    {
+                        Main._matlab._toProcess.add(NurbsCurve.convert2PrintCoords(toPrint.get(i),X_MAX,Y_MAX));
+                    }
+                    toPrint.clear();
                     completeCurves.clear();
                     repaint();
+             }});            
+            
+            im.put(KeyStroke.getKeyStroke(KeyEvent.VK_BACK_SPACE , 0), "onBackspace");
+            am.put("onBackspace", new AbstractAction() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    // Enter pressed
+                    points = new double[0][];
+                    firstTime = true;
+                    repaint();
              }});
+            
         }
 
+        @Override
         protected void paintComponent(Graphics g)
         {
             super.paintComponent(g);
@@ -459,6 +482,7 @@ class PointManager extends MouseInputAdapter
         dragging = false;
     }
 
+        @Override
     public void mousePressed(MouseEvent e)
     {
         Point p = e.getPoint();
@@ -587,6 +611,7 @@ class KnotDisplay extends JPanel
         ButtonGroup group = new ButtonGroup();
         ActionListener l = new ActionListener()
         {
+            @Override
             public void actionPerformed(ActionEvent e)
             {
                 JRadioButton radio = (JRadioButton)e.getSource();
@@ -698,6 +723,7 @@ class WeightsPanel extends JPanel
         ButtonGroup group = new ButtonGroup();
         ActionListener l = new ActionListener()
         {
+            @Override
             public void actionPerformed(ActionEvent e)
             {
                 JRadioButton radio = (JRadioButton)e.getSource();
