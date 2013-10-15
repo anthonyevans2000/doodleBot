@@ -1,4 +1,4 @@
-package dataTypes;
+    package dataTypes;
 
 import java.util.ArrayList;
 import main.Main;
@@ -71,13 +71,23 @@ public class NurbsCurve {
             knots.add(1.d);
         }
         
-        public static NurbsCurve convert2PrintCoords(double[][] curve, int canvasXDim, int canvasYDim) {
+        public static NurbsCurve convert2PrintCoords(double[][] curve) {
             NurbsCurve ans = new NurbsCurve();
             for(int i = 0; i < curve.length; i++) {
-                ans.controlX.add(i, (short)((curve[i][0] - canvasXDim/2)*Main.xDim/canvasXDim));
-                ans.controlY.add(i, (short)((curve[i][1]  - canvasYDim/2)*Main.yDim/canvasYDim));
+                ans.controlX.add(i, (short)((curve[i][0] - Main.X_MAX/2)*Main.xDim/Main.X_MAX));
+                ans.controlY.add(i, (short)((Main.Y_MAX/2 - curve[i][1])*Main.yDim/Main.Y_MAX));
             }
             ans.calculateKnots();
+            return ans; 
+        }
+        
+        public double[][] convert2CanvasCoords() {
+            double[][] ans = new double[controlX.size()][3];
+            for(int i = 0; i < controlX.size(); i++) {
+                ans[i][0] = -controlX.get(i)*Main.X_MAX/Main.xDim + Main.X_MAX/2;
+                ans[i][1] = controlY.get(i)*Main.Y_MAX/Main.yDim + Main.Y_MAX/2;
+                ans[i][2] = 1;
+            }
             return ans; 
         }
 }

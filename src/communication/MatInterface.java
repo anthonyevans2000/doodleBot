@@ -128,11 +128,13 @@ public class MatInterface implements Runnable{
         System.out.println("Beginning Processing");
         MatlabTypeConverter processor = new MatlabTypeConverter(_proxy);
         
+        _proxy.eval("imageLocation = '" + Main.imagePath + "'");
+        System.out.println("imageLocation = '" + Main.imagePath + "'");
         _proxy.eval("img2splines;");
         
         double[][] nSplines = processor.getNumericArray("nSplines").getRealArray2D();
         
-        for(int i = 1; i < nSplines[0][0]; i++) {
+        for(int i = 1; i < nSplines[0][0]+1; i++) {
             ArrayList<Short> x = new ArrayList<Short>();
             ArrayList<Short> y = new ArrayList<Short>();
             ArrayList<Double> k = new ArrayList<Double>();
@@ -147,8 +149,11 @@ public class MatInterface implements Runnable{
             for(int j = 0; j < knots[0].length; j++) {
                 k.add(knots[0][j]);
             }
-            _toProcess.add(new NurbsCurve(x,y,k));
-            //TODO: Consider addding to canvas object as well.
+            NurbsCurve toAdd = new NurbsCurve(x,y,k);
+            //_toProcess.add(toAdd);
+            Main._nurbsDrawer.nurbsPanel.toPrint.add(toAdd.convert2CanvasCoords());
+            Main._nurbsDrawer.nurbsPanel.repaint();
+            
         }
         System.out.println(nSplines[0][0] + " added to Queue");
     }
